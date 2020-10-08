@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html>
+<head>
+ <title>Grade Calculator - Neo Mokhele</title>
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css">
+ <style>
+   h1 { font-size:1.6rem; }
+   h2 { font-size:1.4rem; }
+   h4 { font-size:1.2rem; }
+   #calcform { max-width:414px; padding:20px; background:#f9563a; border:1px solid #e0e0e0; border-radius:7px; }
+   .btn img { filter:invert(100%); }
+   #gradecircle { margin: 0 auto; float:none; }
+   #tbl td { padding-left:25px; }
+   #tbl tr td:first-child { width:45px; }
+   #tbl tr:first-child td { height:45px; }
+   #tbl input[type=number], #tbl select { width:100px; }
+   #sum td:first-child { padding-left:0; }
+</style>
+</head>
+<body>
+
+<div id="lcol" >
+    <center>
+  <div id="doc">
+   <!-- #BeginEditable "doctext" -->
+   <h1>Grade Calculator - Neo Mokhele</h1>
+   <p>Enter grades and weights &amp; press the <em>Calculate</em> button:</p>
+   
+   <br>
+   <form id="calcform" autocomplete="off">
+     <div class="form-group">
+        <label for="gradetype1" class="row ml-0">Select grade type</label>
+        <div class="btn-group btn-group-toggle row ml-0" data-toggle="buttons">
+           <label class="btn btn-primary active">
+              <input type="radio" name="gradetype" id="gradetype1" checked> Percentage
+           </label>
+           <label class="btn btn-dark ">
+              <input type="radio" name="gradetype" id="gradetype2"> Letters
+           </label>
+           <label class="btn btn-light">
+              <input type="radio" name="gradetype" id="gradetype3" > Points
+           </label>
+        </div>
+     </div>
+     <div class="form-group">
+   <table id="tbl">
+    <tbody>
+    <tr>
+     <td>#</td>
+     <td>Grade (letter)</td>
+     <td>Grade (%)</td>
+     <td>Weight</td>
+    </tr>
+    <tr id="sum">
+     <td>Total:</td>
+     <td>&nbsp;</td>
+     <td><input type="number" min="0" step="any" class="form-control" readonly></td>
+     <td><input type="number" min="0" step="any" class="form-control" placeholder="100"></td>
+    </tr>
+    </tbody>
+   </table>
+     </div>
+     <div id="reqdiv" class="form-group form-inline">
+        <span class="mb-2">Find additional grade needed to get average grade</span>
+        of 
+        <div class="input-group mr-1 ml-1" style="width:30% !important">
+           <input type="number" min="0" step="any" id="rgrade" class="form-control" placeholder="80">
+           <div class="input-group-append">
+              <span class="input-group-text">%</span>
+           </div>
+        </div>
+        (weights must be in %).
+     </div>
+     <div class="form-group">
+        <button type="button" id="calcbtn" title="Calculate" class="btn btn-success"> Calculate</button>
+        <button type="reset" id="resetbtn" title="Reset" class="btn btn-warning"> Reset</button>
+        <button type="button" id="addrow" title="Add row" class="btn btn-info"> Add row</button>
+     </div>
+     
+
+     <div class="form-group">
+        <label for="avg">Average grade</label>
+        <div class="input-group">
+        <input type="text" id="avg" class="form-control form-control-lg mr-2" readonly>
+    <input type="text" id="avglet" class="form-control form-control-lg" readonly>
+        </div>
+     </div>
+     <div class="form-group">
+        <div id="gradecircle" class="red small mb-3"></div>
+     </div>
+     <div id="calcdiv" class="form-group">
+        <label for="area">Grade calculation</label>
+        <textarea id="area" class="form-control" readonly></textarea>
+     </div>
+     <div id="finaldiv" class="form-group">
+        <label for="fg">Additional grade needed</label>
+        <div class="input-group">
+        <input type="text" id="fg" class="form-control form-control-lg mr-2" readonly>
+        <input type="text" id="fglet" class="form-control form-control-lg" readonly>
+        </div>
+     </div>
+     
+     </form>
+  
+
+  </div>
+  </center>
+</div>
+
+   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+   <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js" integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous"></script>
+ <script src="https://www.gstatic.com/charts/loader.js" defer></script>
+
+
+<script>
+  var weight=[];
+  var grade=[];
+  var avg;
+  var rows=0;
+
+  $( document ).ready(function() {
+         $('input[type=radio][name=gradetype]').change(function() { GradeType(); });
+   $("#calcbtn").click( Calc );
+   $("#resetbtn").click( Reset );
+   $("#addrow").click( AddRow );
+   for(i=0; i<8; i++)
+    AddRow();
+   $("#tbl tr:nth-child(1)>td:nth-child(2)").css("display","none");
+   $("#tbl tr:nth-child(2)>td:nth-child(2)").css("display","none");
+         $("#sum").hide();
+   lastbtn = $("#btnper");
+   var params=GetURLParams();
+   if( !jQuery.isEmptyObject(params) ) {
+    $("#tbl>tbody>tr:nth-child(3)>td:nth-child(4)>input").val(params.weight1);
+    $("#tbl>tbody>tr:nth-child(3)>td:nth-child(3)>input").val(params.grade1).trigger("change");
+    $("#tbl>tbody>tr:nth-child(4)>td:nth-child(4)>input").val(100-params.weight1);
+    $("#tbl>tbody>tr:nth-child(4)>td:nth-child(3)>input").val(params.grade2).trigger("change");
+   }
+   setTimeout(function(){$("#tbl > tbody > tr:nth-child(2) > td:nth-child(3) > input").focus();},500);
+  });
+      function GradeType()
+      {
+         var radioButtons = $("input[type=radio][name='gradetype']");
+         var i = radioButtons.index(radioButtons.filter(':checked'));
+         if( i==0 )
+            GradePercent();
+         else if( i==1 )
+            GradeLetter();
+         else
+            GradePoints();
+      }
+  function GradePercent()
+  {
+   $("#tbl tr:nth-child(1)>td:nth-child(3)").html("Grade (%)");
+   $("#tbl tr:nth-child(1)>td:nth-child(4)").html("Weight");
+   $("#tbl tr>td:nth-child(2)").css("display","none");
+   $("#tbl tr>td:nth-child(3)").css("display","");
+         $("#reqdiv").show();
+         $("#calcdiv").show();
+         $("#finaldiv").show();
+         $("#chartdiv").show();
+         $("#sum").hide();
+         $("#gradecircle").hide();
+   var k=rows+6;
+   $("#tbl tr:nth-child("+k+")>td:nth-child(1)").html("Average grade:");
+   k=rows+4;
+   $("#tbl tr:nth-child("+k+")").show();
+   k=rows+7;
+   $("#tbl tr:nth-child(n+"+k+")").show();
+   $("#avg").val("");
+   $("#avglet").val("");
+   $("#area").val("");
+   $("#fg").val("");
+   $("#fglet").val("");
+   setTimeout(function(){$("#tbl > tbody > tr:nth-child(2) > td:nth-child(3) > input").focus();},500);
+  }
+  function GradeLetter()
+  {
+   $("#tbl tr:nth-child(1)>td:nth-child(4)").html("Credits");
+   $("#tbl tr td:nth-child(2)").css("display","");
+   $("#tbl tr>td:nth-child(3)").css("display","none");
+         $("#reqdiv").hide();
+         $("#calcdiv").hide();
+         $("#finaldiv").hide();
+         $("#chartdiv").hide();
+         $("#sum").hide();
+         $("#gradecircle").hide();
+   $("#tbl tr:nth-child(3)>td:nth-child(2)>select").focus();
+   var k=rows+6;
+   $("#tbl tr:nth-child("+k+")>td:nth-child(1)").html("GPA:");
+   k=rows+4;
+   $("#tbl tr:nth-child("+k+")").hide();
+   k=rows+8;
+   $("#tbl tr:nth-child(n+"+k+")").hide();
+   $("#avg").val("");
+   $("#avglet").val("");
+   setTimeout(function(){$("#tbl > tbody > tr:nth-child(2) > td:nth-child(2) > select").focus();},500);
+  }
+  function GradePoints()
+  {
+   $("#tbl tr:nth-child(1)>td:nth-child(3)").html("Grade<br>(points)");
+   $("#tbl tr:nth-child(1)>td:nth-child(4)").html("Max Grade<br>(optional)");
+   $("#tbl tr>td:nth-child(2)").css("display","none");
+   $("#tbl tr>td:nth-child(3)").css("display","");
+         $("#reqdiv").hide();
+         $("#calcdiv").hide();
+         $("#finaldiv").hide();
+         $("#chartdiv").hide();
+         $("#sum").show();
+         $("#gradecircle").hide();
+   $("#tbl tr:nth-child(3)>td:nth-child(3)>input").focus();
+   var k=rows+6;
+   $("#tbl tr:nth-child("+k+")>td:nth-child(1)").html("Total grade:");
+   k=rows+4;
+   $("#tbl tr:nth-child("+k+")").hide();
+   k=rows+8;
+   $("#tbl tr:nth-child(n+"+k+")").hide();
+   $("#avg").val("");
+   $("#avglet").val("");
+   setTimeout(function(){$("#tbl > tbody > tr:nth-child(2) > td:nth-child(3) > input").focus();},500);
+  }
+  function Calc()
+  {
+         var radioButtons = $("input[type=radio][name='gradetype']");
+         var i = radioButtons.index(radioButtons.filter(':checked'));
+   if( i==0 )
+    CalcPercent();
+   else if( i==1 )
+    CalcLetter();
+   else if( i==2 )
+    CalcPoints();
+  }
+  function CalcPercent()
+  {
+   avg=0;
+   var sum=0;
+   var txt="";
+   var tavg="";
+   var tsum="";
+   for(var i=0; i<rows; i++)
+   {
+    var k=i+2;
+    grade[i] = $("#tbl > tbody > tr:nth-child("+k+") > td:nth-child(3) > input").val();
+    weight[i] = $("#tbl > tbody > tr:nth-child("+k+") > td:nth-child(4) > input").val();
+    grade[i] = parseFloat(grade[i]);
+    weight[i] = parseFloat(weight[i]);
+    if( weight[i]>0 && grade[i]>=0 )
+    {
+     avg+=weight[i]*grade[i];
+     sum+=weight[i];
+     if( i>0 ) { tavg+="+"; tsum+="+"; }
+     tavg+=weight[i]+"\u00D7"+grade[i];
+     tsum+=weight[i];
+    }
+   }
+   if( avg==0 || sum==0 )
+   {
+    alert("Please enter grades & weights");
+    $("#tbl > tbody > tr:nth-child(3) > td:nth-child(3) > input").focus()
+    return;
+   }
+   var topsum=avg;
+   avg/=sum;
+   avg=avg.toFixed(2);
+   txt="("+tavg+") / ("+tsum+") = "+roundresult(topsum)+" / "+roundresult(sum)+" = "+avg;
+   var avglet=GetLetterFromPercent(avg);
+   var rgrade=$("#rgrade").val();
+   if( rgrade=="" ) rgrade=80;
+   var final = (100*rgrade-sum*avg)/(100-sum);
+   final = final.toFixed(2);
+   var finallet = GetLetterFromPercent(final);
+   $("#avg").val(avg);
+   $("#avglet").val(avglet);
+   $("#area").val(txt);
+   $("#fg").val(final);
+   $("#fglet").val(finallet);
+   if( avg==Math.floor(avg) ) avg=Math.floor(avg);
+         var percent=avg;
+         if( percent>100 ) percent=100;
+         $("#gradecircle").percircle({percent: avg,text: avg+"%"});
+         $("#gradecircle").show();
+   DrawGraph();
+  }
+  function CalcLetter()
+  {
+   avg=0;
+   var sum=0;
+   var txt="";
+   var tavg="";
+   var tsum="";
+   var glook=[-1,4.33,4,3.67,3.33,3,2.67,2.33,2,1.67,1.33,1,0.67,0];
+   for(var i=0; i<rows; i++)
+   {
+    var k=i+2;
+    var index = $("#tbl > tbody > tr:nth-child("+k+") > td:nth-child(2) > select").prop("selectedIndex");
+    grade[i] = glook[index];
+    weight[i] = $("#tbl > tbody > tr:nth-child("+k+") > td:nth-child(4) > input").val();
+    //grade[i] = parseFloat(grade[i]);
+    weight[i] = parseFloat(weight[i]);
+    if( weight[i]>0 && grade[i]>=0 )
+    {
+     avg+=weight[i]*grade[i];
+     sum+=weight[i];
+     if( i>0 ) { tavg+="+"; tsum+="+"; }
+     tavg+=weight[i]+"\u00D7"+grade[i];
+     tsum+=weight[i];
+    }
+   }
+   if( avg==0 || sum==0 )
+   {
+    alert("Please enter grades & credits");
+    $("#tbl > tbody > tr:nth-child(3) > td:nth-child(2) > input").focus()
+    return;
+   }
+   avg/=sum;
+   avg=avg.toFixed(2);
+   var avglet=GetLetterFromGPA(avg);
+   $("#avg").val(avg);
+   $("#avglet").val(avglet);
+         var percent=25*avg;
+         if( percent>100 ) percent=100;
+         $("#gradecircle").percircle({percent: percent,text: avglet});
+         $("#gradecircle").show();
+   $("#chart_div").hide();
+  }
+  function CalcPoints()
+  {
+   var pointsum, maxsum;
+   [pointsum, maxsum] = CalcTotal();
+   if( pointsum==0 || maxsum==0 )
+   {
+    alert("Please enter grade points");
+    $("#tbl > tbody > tr:nth-child(2) > td:nth-child(3) > input").focus();
+    SetFinalURL();
+    return;
+   }
+   avg=pointsum/maxsum*100;
+   avg=avg.toFixed(2);
+   var avglet=GetLetterFromPercent(avg);
+   $("#avg").val(avg);
+   $("#avglet").val(avglet);
+   $("#chart_div").hide();
+         var percent=avg;
+         if( percent>100 ) percent=100;
+         $("#gradecircle").percircle({percent: avg,text: avg+"%"});
+         $("#gradecircle").show();
+  }
+  function GetLetterFromPercent(percent)
+  {
+   var letter="";
+   var lettertbl=['A+','A','A-','B+','B','B-','C+','C','C-','D+','D','D-','F'];
+   var percenttbl=[97,93,90,87,83,80,77,73,70,67,63,60,0];
+   //percent=Math.round(percent);
+   for(var i=0; i<percenttbl.length; i++)
+    if( percent>=percenttbl[i] )
+    {
+     letter = lettertbl[i];
+     break;
+    }
+   return letter;
+  }
+  function GetLetterFromGPA(gpa)
+  {
+   var letter="F";
+   var lettertbl=['A+','A','A-','B+','B','B-','C+','C','C-','D+','D','D-','F'];
+   var gpatbl=[4.165,3.835,3.5,3.165,2.835,2.5,2.165,1.835,1.5,1.165,0.835,0.335];
+   //gpa=Math.round(gpa*100)/100.0;
+   for(var i=0; i<gpatbl.length; i++)
+    if( gpa>=gpatbl[i] )
+    {
+     letter = lettertbl[i];
+     break;
+    }
+   return letter;
+  }
+  function CalcTotal()
+  {
+   var pointsum=0;
+   var maxsum=0;
+   for(var i=0; i<rows; i++)
+   {
+    var k=i+2;
+    grade[i] = $("#tbl > tbody > tr:nth-child("+k+") > td:nth-child(3) > input").val();
+    weight[i] = $("#tbl > tbody > tr:nth-child("+k+") > td:nth-child(4) > input").val();
+    grade[i] = parseFloat(grade[i]);
+    weight[i] = parseFloat(weight[i]);
+    if( grade[i]>=0 ) {
+     pointsum+=grade[i];
+     if( weight[i]>=0 )
+      maxsum+=weight[i];
+    }
+   }
+   $("#sum td:nth-child(3) input").val(pointsum);
+   if( maxsum>0 )
+    $("#sum td:nth-child(4) input").val(maxsum);
+   else {
+    maxsum=$("#sum td:nth-child(4) input").val();
+    if( maxsum=="" ) 
+     maxsum=100;
+    else
+     maxsum=parseFloat(maxsum);
+   }
+   return([pointsum,maxsum]);
+  }
+  function Reset()
+  {
+   $("#chart_div").hide();
+   //SetFinalURL(undefined);
+  }
+  function SetFinalURL(url)
+  {
+   if( url===undefined ) url="final-grade-calculator.html";
+   $("#final1").prop("href",url);
+   $("#final2").prop("href",url);
+  }
+  function GetURLParams()
+  {
+   var url=window.location.href;
+   var regex = /[?&]([^=#]+)=([^&#]*)/g,
+     //url = "www.domain.com/?v=123&p=hello",
+     params = {},
+     match;
+   while(match = regex.exec(url)) {
+       params[match[1]] = match[2];
+   }
+   return params;
+  }
+  function AddRow()
+  {
+   $('#tbl > tbody > tr').eq(rows++).after("<tr>\
+    <td>"+rows+"</td>\
+    <td><select name='lgrade[]' class='form-control'>\
+     <option selected>--</option>\
+     <option>A+</option>\
+     <option>A</option>\
+     <option>A-</option>\
+     <option>B+</option>\
+     <option>B</option>\
+     <option>B-</option>\
+     <option>C+</option>\
+     <option>C</option>\
+     <option>C-</option>\
+     <option>D+</option>\
+     <option>D</option>\
+     <option>D-</option>\
+     <option>F</option>\
+    </select></td>\
+    <td><input type='number' name='grade[]' min='0' step='any' class='form-control'></td>\
+    <td><input type='number' name='weight[]' min='0' step='any' class='form-control'></td>\
+   </tr>");
+   var k=rows+1;
+         var radioButtons = $("input[type=radio][name='gradetype']");
+         var i = radioButtons.index(radioButtons.filter(':checked'));
+   if( i==2 )
+    $("#tbl tr:nth-child("+k+")>td:nth-child(3)").css("display","none");
+   else
+    $("#tbl tr:nth-child("+k+")>td:nth-child(2)").css("display","none");
+  }
+  function DrawGraph()
+  {
+   google.charts.load('current', {'packages':['corechart']});
+   google.charts.setOnLoadCallback(drawChart);
+   $("#chart_div").show();
+  }
+  function drawChart() {
+     var d=[['', '', {role: 'style'}, {role: 'tooltip'}]];
+         var maxgrade=0;
+         for(var i=0; i<rows; i++)
+            if( grade[i]>0 )
+               maxgrade=Math.max(maxgrade,grade[i]);
+         var len=Math.max(maxgrade,100)+1;        
+         console.log(len);
+         var g=[],maxg=0;
+         for(var i=0; i<=len; i++) g[i]=0;
+   for(var i=0; i<rows; i++)
+    if( weight[i]>0 && grade[i]>=0 )
+            {
+               var ig=Math.round(grade[i]);
+               g[ig]+=weight[i];
+               if( g[ig]>maxg ) maxg=g[ig];
+            }
+         for(var i=0; i<=len; i++)
+            d.push([i,  g[i], '', '']);
+         d.push([avg,  maxg, '#ff0000', 'Average Grade:'+avg]);
+         var data = google.visualization.arrayToDataTable(d);
+
+         var options = {
+            title: 'Grades Distribution',
+            legend: { position: 'none' },
+            vAxis: {title: 'Weight'},
+            hAxis: {
+               title: 'Grade [%]',
+               ticks: [0,10,20,30,40,50,60,70,80,90,100]
+            },
+      seriesType: 'bars',
+         };
+
+         var chart = new google.visualization.ComboChart(document.getElementById('chart_div'));
+         chart.draw(data, options);
+      }
+  function roundresult(x) {
+   y = parseFloat(x);
+   y = roundnum(y,10);
+   return y;
+  }
+  function roundnum(x,p) {
+   var i;
+   var n=parseFloat(x);
+   var m=n.toPrecision(p+1);
+   var y=String(m);
+   i=y.indexOf('e');
+   if( i==-1 ) i=y.length;
+   j=y.indexOf('.');
+   if( i>j && j!=-1 ) 
+   {
+    while(i>0)
+    {
+     if(y.charAt(--i)=='0')
+      y = removeAt(y,i);
+     else
+      break;
+    }
+    if(y.charAt(i)=='.')
+     y = removeAt(y,i);
+   }
+   return y;
+  }
+  function removeAt(s,i) {
+   s = s.substring(0,i)+s.substring(i+1,s.length);
+   return s;
+  }
+ </script>  
+</body>
+</html>
